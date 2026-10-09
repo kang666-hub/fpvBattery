@@ -41,3 +41,11 @@ test('6 200W 限制', () => {
   assert.equal(ctx.formatDuration(m), '2 小時 17 分');
 });
 test('容量0不顯示時間', () => assert.equal(ctx.chargeMinutes(0, 1), null));
+test('切換類型倍率規則', () => {
+  assert.equal(ctx.cOnTypeChange('lion', 1), 0.2);
+  assert.equal(ctx.cOnTypeChange('lion', 2), 0.2);
+  assert.equal(ctx.chargeCurrent(1500, ctx.cOnTypeChange('lion', 1)).toFixed(1), '0.3');
+  assert.equal(ctx.cOnTypeChange('lipo', 0.2), 1);
+  assert.equal(ctx.cOnTypeChange('lihv', 0.5), 0.5);
+  assert.equal(ctx.cOnTypeChange('lipo', 2), 2);
+});
