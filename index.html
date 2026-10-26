@@ -165,7 +165,7 @@
       <details class="gloss">
         <summary>看不懂？名詞白話解釋</summary>
         <p><b>Balance 平衡充電</b>：讓每一顆 cell 都充到接近一樣的電壓，比較安全。</p>
-        <p><b>Storage 儲存電壓</b>：不飛超過幾天時，把電池放在約 3.80–3.85V/cell，比較不傷電池。</p>
+        <p><b>Storage 儲存電壓</b>：不飛超過幾天時，把電池放在約 <span id="glossStore"></span>V/cell，比較不傷電池。</p>
         <p><b>過放</b>：電池用到太低電壓，會傷電池，也可能讓電池變危險。</p>
         <p><b>Voltage sag（壓降）</b>：油門一拉，電壓突然掉很多。通常代表電池老化或負載太大。</p>
       </details>
@@ -298,7 +298,7 @@ function chargeTimes(capMah, actualA) {
   var t = capMah / 1000 / actualA * 60;
   return { theory: Math.round(t), low: Math.round(t * BALANCE_LOW), high: Math.round(t * BALANCE_HIGH) };
 }
-function formatHM(min) { return Math.floor(min / 60) + ' 小時 ' + (min % 60) + ' 分'; }
+function formatHM(min) { return Math.floor(min / 60) + ' 小時' + (min % 60 ? ' ' + (min % 60) + ' 分' : ''); }
 function formatRange(a, b) {
   if (b < 90) return a + '–' + b + ' 分鐘';
   return formatHM(a) + '–' + formatHM(b);
@@ -310,7 +310,11 @@ function cOnTypeChange(newType, c) {
 }
 function formatDuration(min) {
   if (min < 90) return min + ' 分鐘';
-  return Math.floor(min / 60) + ' 小時 ' + (min % 60) + ' 分';
+  return formatHM(min);
+}
+function storeText(type) {
+  var a = BATT[type].store;
+  return a[0] === a[1] ? a[0].toFixed(2) : a[0].toFixed(2) + '–' + a[1].toFixed(2);
 }
 function voltageRows(type, s) {
   var b = BATT[type];
@@ -412,7 +416,6 @@ function healthAssess(inp) {
   volt(gFV, 'fullDelta', '滿電後');
   if (gPV.status === 'full') {
     volt(gPV, 'postDelta', '飛完靜置後');
-    evaluated = true;
     var ps = spread(gPV.vals);
     m.postMin = ps.min; m.postMinIdx = ps.minIdx + 1;
     for (i = 0; i < n; i++) if (gPV.vals[i] < cfg.over) {
@@ -428,10 +431,14 @@ function healthAssess(inp) {
   var level;
   if (forced) level = 'red';
   else if (full === 0) level = 'gray';
+  else if (!evaluated) level = 'blue';
   else level = healthLevel(score);
-  var out = { level: level, score: full === 0 ? null : score, rawScore: score, metrics: m, notes: notes, reasons: reasons, checks: checks };
+  var limited = level === 'blue' && !forced && !evaluated;
+  var out = { level: level, score: full === 0 || limited ? null : score, rawScore: score, metrics: m, notes: notes, reasons: reasons, checks: checks };
   var L = LEVELS[level], land = cfg.land + (L.add || 0);
-  out.label = L.label; out.color = L.color; out.usage = L.usage; out.charge = L.charge; out.fly = L.fly;
+  out.label = limited ? '正常｜資料有限，持續觀察' : L.label;
+  out.limited = limited;
+  out.color = L.color; out.usage = L.usage; out.charge = L.charge; out.fly = L.fly;
   out.landing = L.add === null ? null : { perCell: land, total: land * n };
   var lion = type === 'lion';
   if (lion && L.charge && level !== 'red') {
@@ -439,7 +446,8 @@ function healthAssess(inp) {
   }
   if (level === 'gray') out.reasons = ['先量內阻，或記下滿電／飛完的每顆電壓，才能判斷健康度。'];
   else {
-    if (!reasons.length) out.reasons = ['各項都在正常範圍。'];
+    if (limited) out.reasons = ['這組數據無法和其他 cell 比較，只確認了沒有過放或外觀問題。'];
+    else if (!reasons.length) out.reasons = ['各項都在正常範圍。'];
     if (!checks.length && full < 3) {
       out.reasons.push(gIR.status === 'full' && !(gFV.status === 'full' || gPV.status === 'full') ? '只依 IR 判斷，資料越完整越準。'
         : gIR.status !== 'full' ? '只依電壓判斷，資料越完整越準。' : '資料還不完整，填越完整越準。');
@@ -637,6 +645,7 @@ function healthAssess(inp) {
       ? '⚠ 1C 充電：僅限電芯原廠規格書明確標示支援此速率（如部分高倍率21700），一般18650/21700建議0.5C以下，全程監控溫度！'
       : '⚠ 2C 快充：請確認電池標示支援 2C，並全程監控溫度！';
 
+    $('glossStore').textContent = storeText(st.type);
     setVal($('sInput'), s); setVal($('hsInput'), s);
     setVal($('capInput'), st.cap); setVal($('hCapInput'), st.cap);
     Array.prototype.forEach.call($('hTabs').children, function (b) { btnStyle(b, b.dataset.k === st.type, BATT[b.dataset.k].accent, 4); });

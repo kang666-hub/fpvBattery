@@ -85,7 +85,7 @@ test('H-D 勾選鼓包紅燈', () => {
 test('H-E 全空灰燈無分數', () => { const r = H({}); assert.equal(r.level, 'gray'); assert.equal(r.score, null); });
 test('H-F 1S 450mAh IR 25 不紅、有參考提示', () => {
   const r = H({ s: 1, cap: 450, ir: [25] });
-  assert.notEqual(r.level, 'red'); assert.notEqual(r.level, 'gray'); assert.ok(r.notes.irScope.includes('只能參考各 cell 之間的差距'));
+  assert.equal(r.level, 'blue'); assert.equal(r.score, null); assert.equal(r.label, '正常｜資料有限，持續觀察'); assert.ok(r.reasons.join('').includes('無法和其他 cell 比較')); assert.ok(r.notes.irScope.includes('只能參考各 cell 之間的差距'));
 });
 test('H-G 落差<3 不算倍率 100 分', () => { assert.equal(H({ ir: [1, 1, 2, 1, 1, 1] }).score, 100); });
 test('H-H 飛完 Cell 3 過放紅燈', () => {
@@ -105,4 +105,16 @@ test('H 內阻絕對值僅限 LiPo/LiHV 850–2500mAh', () => {
   assert.equal(H({ cap: 5000, ir: [10, 12, 11, 12, 12, 13] }).score, 100);
   const li = H({ type: 'lion', ir: [25, 25, 25, 25, 25, 25] });
   assert.equal(li.level, 'green'); assert.ok(li.notes.irScope);
+});
+
+test('formatDuration／formatRange 整點不顯示 0 分', () => {
+  assert.equal(ctx.formatDuration(300), '5 小時'); assert.equal(ctx.formatDuration(125), '2 小時 5 分');
+  assert.equal(ctx.formatRange(300, 360), '5 小時–6 小時');
+});
+test('儲存電壓文字隨類型', () => {
+  assert.equal(ctx.storeText('lipo'), '3.80–3.85'); assert.equal(ctx.storeText('lihv'), '3.80–3.85'); assert.equal(ctx.storeText('lion'), '3.60–3.70');
+});
+test('1S 只有飛完電壓：資料有限藍燈，過放仍紅燈', () => {
+  const r = H({ s: 1, cap: 1300, pv: [3.7] }); assert.equal(r.level, 'blue'); assert.equal(r.score, null);
+  assert.equal(H({ s: 1, cap: 1300, pv: [2.9] }).level, 'red');
 });
