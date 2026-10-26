@@ -58,3 +58,51 @@ test('LiPo 6S 1300mAh 2C', () => {
 });
 test('4S LiHV 儲存範圍', () => assert.equal(rows('lihv', 4)['儲存'].total, '15.2–15.4'));
 test('S 數上限 6', () => { assert.equal(ctx.clampS(8), 6); assert.equal(ctx.clampS(0), 1); assert.equal(ctx.clampS(4), 4); });
+
+test('formatRange 跨 90 分鐘統一小時格式', () => {
+  assert.equal(ctx.formatRange(85, 100), '1 小時 25 分–1 小時 40 分');
+  assert.equal(ctx.formatRange(33, 39), '33–39 分鐘');
+});
+const H = (o) => ctx.healthAssess({ type: 'lipo', s: 6, cap: 1300, ir: [], fv: [], pv: [], checks: [], ...o });
+test('H-A 健康 100 綠', () => { const r = H({ ir: [3, 3, 4, 3, 4, 3] }); assert.equal(r.score, 100); assert.equal(r.level, 'green'); });
+test('H-B 黃燈 55 指名 Cell 4', () => {
+  const r = H({ ir: [8, 9, 10, 18, 9, 8] });
+  assert.equal(r.score, 55); assert.equal(r.level, 'yellow'); assert.equal(r.metrics.weakest, 4);
+  // L：降落 3.70 / 22.2V，不出現「可 2C」
+  assert.equal(r.landing.perCell.toFixed(2), '3.70'); assert.equal(r.landing.total.toFixed(1), '22.2');
+  const all = JSON.stringify(r); assert.ok(all.includes('3.70V/cell（6S 約 22.2V）')); assert.ok(!all.includes('可 2C')); assert.ok(!all.includes('可快充'));
+});
+test('H-C 橘燈 45 指名 Cell 4', () => {
+  const r = H({ ir: [10, 12, 11, 28, 12, 13] });
+  assert.equal(r.score, 45); assert.equal(r.level, 'orange'); assert.equal(r.metrics.weakest, 4);
+  assert.ok(!JSON.stringify(r).includes('可快充'));
+});
+test('H-D 勾選鼓包紅燈', () => {
+  const r = H({ checks: ['電池鼓包'] });
+  assert.equal(r.level, 'red'); assert.equal(r.score, null); assert.equal(r.conclusion, '不要再充電或飛行，建議退役回收。');
+  assert.ok(r.reasons.join('').includes('勾選了：電池鼓包'));
+});
+test('H-E 全空灰燈無分數', () => { const r = H({}); assert.equal(r.level, 'gray'); assert.equal(r.score, null); });
+test('H-F 1S 450mAh IR 25 不紅、有參考提示', () => {
+  const r = H({ s: 1, cap: 450, ir: [25] });
+  assert.notEqual(r.level, 'red'); assert.notEqual(r.level, 'gray'); assert.ok(r.notes.irScope.includes('只能參考各 cell 之間的差距'));
+});
+test('H-G 落差<3 不算倍率 100 分', () => { assert.equal(H({ ir: [1, 1, 2, 1, 1, 1] }).score, 100); });
+test('H-H 飛完 Cell 3 過放紅燈', () => {
+  const r = H({ pv: [3.75, 3.74, 2.90, 3.75, 3.74, 3.75] });
+  assert.equal(r.level, 'red'); const t = r.reasons.join(''); assert.ok(t.includes('Cell 3') && t.includes('曾經過放'));
+});
+test('H-I IR 只填 3 顆不計算', () => {
+  const r = H({ ir: [3, 3, 4, '', '', ''] });
+  assert.equal(r.notes.ir, '請填完 6 顆，或全部留空'); assert.equal(r.level, 'gray'); assert.equal(r.metrics.avgIR, null);
+});
+test('H-J 單 cell > 30mΩ 紅燈', () => { assert.equal(H({ ir: [10, 12, 11, 32, 12, 13] }).level, 'red'); });
+test('H-K 滿電壓差 0.07 → 75 藍', () => {
+  const r = H({ fv: [4.20, 4.19, 4.20, 4.13, 4.20, 4.20] });
+  assert.equal(r.score, 75); assert.equal(r.level, 'blue');
+});
+test('H 內阻絕對值僅限 LiPo/LiHV 850–2500mAh', () => {
+  assert.equal(H({ cap: 5000, ir: [10, 12, 11, 12, 12, 13] }).score, 100);
+  const li = H({ type: 'lion', ir: [25, 25, 25, 25, 25, 25] });
+  assert.equal(li.level, 'green'); assert.ok(li.notes.irScope);
+});

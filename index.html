@@ -32,6 +32,23 @@
   details.gloss { margin-top:12px; border:2px solid #111; background:#fff; padding:10px 12px; font-size:13px; line-height:1.7; }
   details.gloss summary { font-weight:900; cursor:pointer; }
   details.gloss p { margin:8px 0 0; font-weight:400; }
+  .hint { font-size:12.5px; font-weight:700; color:#c92a2a; margin-top:6px; line-height:1.5; }
+  .hint:empty { display:none; }
+  .cin { width:100%; min-width:0; }
+  .cin small { display:block; font-size:11px; font-weight:700; color:#444; margin-bottom:2px; }
+  .cin input { width:100%; min-width:0; }
+  .chk { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; padding:6px 0; }
+  .chk input { width:20px; height:20px; accent-color:#111; }
+  .hres { border:3px solid #111; background:#fff; }
+  .hres .top { padding:16px; color:#fff; }
+  .hres .top .lab { font-size:20px; font-weight:900; }
+  .hres .top .concl { font-size:15px; font-weight:700; margin-top:8px; line-height:1.5; }
+  .hres .body { padding:14px 16px; font-size:14px; line-height:1.7; }
+  .hres h4 { margin:12px 0 4px; font-size:14px; font-weight:900; }
+  .hres h4:first-child { margin-top:0; }
+  .hres ul { margin:0; padding-left:20px; }
+  .hres table { width:100%; border-collapse:collapse; font-size:13px; }
+  .hres td { border-top:1px solid #ccc; padding:5px 4px; } .hres td:last-child { text-align:right; font-weight:700; }
   .rcard { border:3px solid #111; background:#fff; padding:14px 16px; font-size:14px; line-height:1.7; }
   .rcard h3 { margin:0 0 8px; font-size:16px; font-weight:900; color:#111; }
   .rcard ol, .rcard ul { margin:0; padding-left:22px; }
@@ -156,10 +173,43 @@
     </div>
 
     <div class="panel" id="panel-health" hidden>
-      <div class="rcard">
-        <h3>電池健康度檢查</h3>
-        <p style="font-weight:400">即將推出</p>
+      <div class="rcard"><h3 style="margin:0">電池健康度檢查</h3></div>
+      <div>
+        <div class="sec">電池類型</div>
+        <div class="row" id="hTabs"></div>
       </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:4px">
+          <span class="sec" style="margin:0">芯數（S 數）</span>
+        </div>
+        <div class="grid5" id="hsBtns"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+          <span class="sub">自訂（1–6S）</span>
+          <input class="num" id="hsInput" type="number" inputmode="numeric" min="1" max="6" style="width:76px">
+        </div>
+      </div>
+      <div>
+        <div class="sec">容量（mAh）</div>
+        <input class="big-input mono" id="hCapInput" type="number" inputmode="numeric" min="0">
+      </div>
+      <div class="small" style="margin:0">內阻 IR 在充電器選單的 IR／內阻測試裡。充電器量不到可以跳過，只填電壓也能判斷。請盡量用同一台充電器、相近溫度和電量來比較。</div>
+      <div><div class="sec">每顆 cell 內阻 IR（mΩ，選填）</div><div class="grid3" id="g-ir"></div><div class="hint" id="n-ir"></div><div class="hint" id="n-irScope"></div></div>
+      <div><div class="sec">滿電後每顆 cell 電壓（V，選填）</div><div class="grid3" id="g-fv"></div><div class="hint" id="n-fv"></div></div>
+      <div><div class="sec">飛完靜置後每顆 cell 電壓（V，選填）</div><div class="grid3" id="g-pv"></div><div class="hint" id="n-pv"></div></div>
+      <div>
+        <div class="sec">外觀與狀況（有就勾）</div>
+        <div id="hChecks"></div>
+      </div>
+      <div id="hResult"></div>
+      <details class="gloss">
+        <summary>怎麼看電池健不健康？</summary>
+        <p>電池健康不是只看容量，還要看內阻 IR、cell 平衡、飛行壓降和外觀。</p>
+        <p><b>IR／內阻</b>：電池出力的阻力。越高代表越沒力、越容易發熱、越容易壓降。</p>
+        <p><b>Cell 壓差</b>：每一小格電池的電壓差。差太多代表其中一格可能比較弱。</p>
+        <p>同一顆電池裡，如果某顆 cell 內阻特別高，通常是那顆比較老化；重油門時它會先掉壓。</p>
+        <p><b>檢查重點</b>：每顆內阻是否接近、滿電後每顆是否接近滿充電壓、飛完靜置後是否有某顆特別低、外觀有無鼓包摔凹破皮異味、飛行時是否壓降明顯或時間變短。</p>
+        <p>內阻會受溫度、電量、充電器影響，請用同一台充電器、相近條件比較趨勢。</p>
+      </details>
     </div>
 
     <div class="panel" id="panel-recycle" hidden>
@@ -248,9 +298,10 @@ function chargeTimes(capMah, actualA) {
   var t = capMah / 1000 / actualA * 60;
   return { theory: Math.round(t), low: Math.round(t * BALANCE_LOW), high: Math.round(t * BALANCE_HIGH) };
 }
+function formatHM(min) { return Math.floor(min / 60) + ' 小時 ' + (min % 60) + ' 分'; }
 function formatRange(a, b) {
   if (b < 90) return a + '–' + b + ' 分鐘';
-  return formatDuration(a) + '–' + formatDuration(b);
+  return formatHM(a) + '–' + formatHM(b);
 }
 // 切換類型時的倍率：Li-ion 一律 0.2C；LiPo/LiHV 目前倍率不在 0.5/1/2 內才改 1C
 function cOnTypeChange(newType, c) {
@@ -276,6 +327,152 @@ function voltageRows(type, s) {
     { cls: 'red',    name: '過放（會傷電池）', cell: '低於 ' + fmt2(b.over), total: '低於 ' + fmt1(b.over * s) }
   ];
 }
+
+// ---- 健康檢查（v3.1）----
+var HEALTH_CHECKS = ['電池鼓包', '外皮破損', '摔凹／撞擊變形', '異常發熱', '有異味', '某顆 cell 沒電壓', '平衡頭或主電源線破損'];
+function r3(x) { return Math.round(x * 1000 + 1e-6) / 1000; }
+function r2(x) { return Math.round(x * 100 + 1e-6) / 100; }
+// 一組 cell 輸入：全填 / 全空 / 只填一部分
+function parseCells(arr, n) {
+  var vals = [], filled = 0, i, t, v;
+  for (i = 0; i < n; i++) {
+    t = arr && arr[i] != null ? String(arr[i]).trim() : '';
+    v = t === '' ? NaN : Number(t);
+    if (isFinite(v) && v >= 0) { filled++; vals.push(v); } else vals.push(null);
+  }
+  return { status: filled === 0 ? 'empty' : filled === n ? 'full' : 'partial', vals: vals, filled: filled };
+}
+function spread(vals) {
+  var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
+  return { max: mx, min: mn, maxIdx: vals.indexOf(mx), minIdx: vals.indexOf(mn) };
+}
+function irApplies(type, capMah) { return (type === 'lipo' || type === 'lihv') && capMah >= 850 && capMah <= 2500; }
+var LEVELS = {
+  green:  { color: '#2f9e44', label: '健康｜可正常使用', usage: '正常飛行', charge: '可 1C；電池有標示才可 2C', fly: '可正常飛', add: 0 },
+  blue:   { color: '#1971c2', label: '正常｜可用但持續觀察', usage: '日常飛行', charge: '可 1C；電池有標示才可 2C', fly: '可正常飛，持續觀察', add: 0 },
+  yellow: { color: '#f08c00', label: '老化中｜建議當練習電', usage: '練習電', charge: '1C，不建議 2C', fly: '早點降落、不要長程', add: 0.1 },
+  orange: { color: '#e8590c', label: '警告｜不建議重負載', usage: '地面測試／低負載', charge: '0.5–1C，不要快充', fly: '不要重油門、縮短飛行時間', add: 0.1 },
+  red:    { color: '#e03131', label: '高風險｜建議退役', usage: '退役回收', charge: '不要充電', fly: '不要飛', add: null },
+  gray:   { color: '#868e96', label: '資料不足', usage: null, charge: null, fly: null, add: null }
+};
+function healthLevel(score) { return score >= 85 ? 'green' : score >= 70 ? 'blue' : score >= 50 ? 'yellow' : score >= 30 ? 'orange' : 'red'; }
+function healthAssess(inp) {
+  var type = inp.type, n = inp.s, cfg = BATT[type];
+  var gIR = parseCells(inp.ir, n), gFV = parseCells(inp.fv, n), gPV = parseCells(inp.pv, n);
+  var checks = inp.checks || [];
+  var scoped = irApplies(type, inp.cap);
+  var score = 100, reasons = [], forced = false, evaluated = false, i;
+  var m = { avgIR: null, maxIR: null, minIR: null, irDelta: null, irRatio: null, irRatioText: '—', fullDelta: null, postDelta: null, postMin: null, postMinIdx: null, weakest: null };
+  var notes = { ir: null, fv: null, pv: null, irScope: null };
+  [['ir', gIR, 'IR'], ['fv', gFV, '滿電電壓'], ['pv', gPV, '飛完電壓']].forEach(function (g) {
+    if (g[1].status === 'partial') notes[g[0]] = '請填完 ' + n + ' 顆，或全部留空';
+  });
+  var weakNamed = false;
+  if (gIR.status === 'full') {
+    var v = gIR.vals, sp = spread(v), sum = 0;
+    v.forEach(function (x) { sum += x; });
+    m.avgIR = r2(sum / n); m.maxIR = sp.max; m.minIR = sp.min;
+    if (!scoped) notes.irScope = '這個容量／類型的內阻絕對值差異很大，只能參考各 cell 之間的差距，請記錄同一顆電池的變化趨勢。';
+    if (scoped) {
+      evaluated = true;
+      var d = m.avgIR <= 5 ? 0 : m.avgIR <= 10 ? 10 : m.avgIR <= 20 ? 25 : 45;
+      if (d) { score -= d; reasons.push('平均內阻 ' + m.avgIR + ' mΩ 偏高，整顆電池比較沒力、容易發熱。'); }
+      if (sp.max > 30) { forced = true; reasons.push('Cell ' + (sp.maxIdx + 1) + ' 內阻 ' + sp.max + ' mΩ，已超過 30 mΩ。'); }
+    }
+    if (n >= 2) {
+      evaluated = true;
+      m.irDelta = r2(sp.max - sp.min);
+      if (sp.min > 0) m.irRatio = Math.round(sp.max / sp.min * 100) / 100;
+      m.irRatioText = m.irRatio === null ? '資料不足' : String(m.irRatio);
+      if (m.irDelta >= 3 && m.irRatio !== null) {
+        var rd = m.irRatio <= 1.5 ? 0 : m.irRatio <= 2 ? 5 : m.irRatio <= 3 ? 15 : 30;
+        score -= rd;
+      }
+      var dd = m.irDelta <= 5 ? 0 : m.irDelta <= 10 ? 5 : m.irDelta <= 20 ? 15 : 30;
+      score -= dd;
+      if (m.irRatio !== null && m.irRatio > 1.5 && m.irDelta >= 3) {
+        m.weakest = sp.maxIdx + 1; weakNamed = true;
+        reasons.push('Cell ' + m.weakest + ' 內阻比其他 cell 高，重油門時它可能會先掉壓。');
+      } else if (dd > 0) {
+        reasons.push('各 cell 內阻落差 ' + m.irDelta + ' mΩ，有點不平均。');
+      }
+    }
+  }
+  function volt(g, key, name) {
+    if (g.status !== 'full' || n < 2) return;
+    evaluated = true;
+    var sp = spread(g.vals), dl = r3(sp.max - sp.min);
+    m[key] = dl;
+    if (dl > 0.10) { forced = true; reasons.push(name + ' cell 壓差 ' + dl.toFixed(2) + 'V，差太多，其中一格可能已經壞了。'); }
+    else if (dl > 0.03) {
+      score -= dl <= 0.05 ? 10 : 25;
+      reasons.push(name + ' cell 壓差 ' + dl.toFixed(2) + 'V，其中一格可能比較弱。');
+    }
+  }
+  volt(gFV, 'fullDelta', '滿電後');
+  if (gPV.status === 'full') {
+    volt(gPV, 'postDelta', '飛完靜置後');
+    evaluated = true;
+    var ps = spread(gPV.vals);
+    m.postMin = ps.min; m.postMinIdx = ps.minIdx + 1;
+    for (i = 0; i < n; i++) if (gPV.vals[i] < cfg.over) {
+      forced = true;
+      reasons.push('Cell ' + (i + 1) + ' 飛完只剩 ' + gPV.vals[i].toFixed(2) + 'V，曾經過放。');
+    }
+  }
+  checks.forEach(function (c) { reasons.push('勾選了：' + c + '。'); });
+  if (checks.length) forced = true;
+  if (score < 0) score = 0;
+
+  var full = (gIR.status === 'full') + (gFV.status === 'full') + (gPV.status === 'full');
+  var level;
+  if (forced) level = 'red';
+  else if (full === 0) level = 'gray';
+  else level = healthLevel(score);
+  var out = { level: level, score: full === 0 ? null : score, rawScore: score, metrics: m, notes: notes, reasons: reasons, checks: checks };
+  var L = LEVELS[level], land = cfg.land + (L.add || 0);
+  out.label = L.label; out.color = L.color; out.usage = L.usage; out.charge = L.charge; out.fly = L.fly;
+  out.landing = L.add === null ? null : { perCell: land, total: land * n };
+  var lion = type === 'lion';
+  if (lion && L.charge && level !== 'red') {
+    out.charge = level === 'orange' ? '0.2C，不要快充' : level === 'yellow' ? '0.2–0.5C，不要快充' : '0.5C 以下，以電芯規格書為準';
+  }
+  if (level === 'gray') out.reasons = ['先量內阻，或記下滿電／飛完的每顆電壓，才能判斷健康度。'];
+  else {
+    if (!reasons.length) out.reasons = ['各項都在正常範圍。'];
+    if (!checks.length && full < 3) {
+      out.reasons.push(gIR.status === 'full' && !(gFV.status === 'full' || gPV.status === 'full') ? '只依 IR 判斷，資料越完整越準。'
+        : gIR.status !== 'full' ? '只依電壓判斷，資料越完整越準。' : '資料還不完整，填越完整越準。');
+    }
+  }
+  var lt = out.landing ? out.landing.perCell.toFixed(2) + 'V/cell（' + n + 'S 約 ' + out.landing.total.toFixed(1) + 'V）' : '';
+  var minv = cfg.min.toFixed(2) + 'V/cell';
+  var conclusion = {
+    green: '這顆電池狀況良好，可以正常使用。', blue: '這顆電池還可以用，建議持續觀察。',
+    yellow: '這顆電池開始老化，建議當練習電。', orange: '這顆電池老化明顯，只適合地面測試或低負載。',
+    red: '不要再充電或飛行，建議退役回收。', gray: '先量內阻，或記下滿電／飛完的每顆電壓，才能判斷健康度。'
+  }[level];
+  out.conclusion = conclusion;
+  var heat = '飛完摸一下電池溫度，燙手或異常發熱就停止使用。';
+  var chargeA = '充電：' + out.charge + '。', landA = '降落：飛行中 ' + lt + '就準備降落。';
+  out.actions = {
+    green: [chargeA, landA, heat],
+    blue: [chargeA, landA, heat, '每隔幾次飛行量一次內阻，記錄變化。'],
+    yellow: [chargeA, landA, heat, '早點降落，飛近距離就好。'],
+    orange: [chargeA, landA, heat, '只做地面測試或低負載，縮短飛行時間。'],
+    red: ['照『退役回收』分頁的步驟處理。', '先放在防火袋或安全位置，不要再接充電器。'],
+    gray: []
+  }[level];
+  out.donts = {
+    green: ['不要飛到 ' + minv + ' 以下。', '充電不要離人。'],
+    blue: ['不要飛到 ' + minv + ' 以下。', '不要忽略單顆 cell 的異常。'],
+    yellow: ['不要 2C 快充。', '不要長程飛遠。', '不要跟健康電池一起並充。', '不要飛到 ' + minv + ' 以下。'],
+    orange: ['不要重油門。', '不要快充。', '不要跟健康電池一起並充。', '不要飛到 ' + minv + ' 以下。'],
+    red: ['不要再充電。', '不要再飛。', '不要刺破、拆解或丟一般垃圾。'],
+    gray: []
+  }[level];
+  return out;
+}
 </script>
 
 <script>
@@ -288,7 +485,7 @@ function voltageRows(type, s) {
   var S_QUICK = [1, 2, 3, 4, 6];
   var CAP_QUICK = [450, 850, 1300, 1500, 3000, 4500];
 
-  var st = { type: 'lipo', s: 3, cap: 1500, c: 1, chg: 0 };
+  var st = { type: 'lipo', s: 3, cap: 1500, c: 1, chg: 0, ir: [], fv: [], pv: [], checks: {} };
   var $ = function (id) { return document.getElementById(id); };
 
   function opts() { return st.type === 'lion' ? C_OPTS.lion : C_OPTS.std; }
@@ -303,13 +500,19 @@ function voltageRows(type, s) {
     var tabs = $('tabs');
     ['lipo', 'lihv', 'lion'].forEach(function (k) {
       var b = mk('tab', BATT[k].label); b.dataset.k = k;
-      b.onclick = function () { if (k !== st.type) { st.c = cOnTypeChange(k, st.c); st.type = k; } render(); };
+      b.onclick = function () { setType(k); };
       tabs.appendChild(b);
+      var hb = mk('tab', BATT[k].label); hb.dataset.k = k;
+      hb.onclick = function () { setType(k); };
+      $('hTabs').appendChild(hb);
     });
     S_QUICK.forEach(function (n) {
       var b = mk('btn', n + 'S'); b.dataset.n = n;
-      b.onclick = function () { st.s = n; render(); };
+      b.onclick = function () { setS(n); render(); };
       $('sBtns').appendChild(b);
+      var hb = mk('btn', n + 'S'); hb.dataset.n = n;
+      hb.onclick = function () { setS(n); render(); };
+      $('hsBtns').appendChild(hb);
     });
     CAP_QUICK.forEach(function (v) {
       var b = mk('chip', String(v)); b.dataset.v = v;
@@ -322,26 +525,91 @@ function voltageRows(type, s) {
       (function (i) { b.onclick = function () { st.c = opts()[i].v; render(); }; })(i);
       $('cBtns').appendChild(b);
     }
-    $('sInput').addEventListener('input', function (e) {
-      var v = parseInt(e.target.value, 10);
-      if (!isNaN(v) && v >= 1 && v <= 6) { st.s = v; render(true); }
+    ['sInput', 'hsInput'].forEach(function (id) {
+      $(id).addEventListener('input', function (e) {
+        var v = parseInt(e.target.value, 10);
+        if (!isNaN(v) && v >= 1 && v <= MAX_S) { setS(v); render(); }
+      });
+      $(id).addEventListener('change', function (e) {
+        var v = parseInt(e.target.value, 10);
+        if (isNaN(v)) v = 1;
+        setS(clampS(v)); e.target.value = st.s; render();
+      });
     });
-    $('sInput').addEventListener('change', function (e) {
-      var v = parseInt(e.target.value, 10);
-      if (isNaN(v)) v = 1;
-      st.s = clampS(v); render();
+    ['capInput', 'hCapInput'].forEach(function (id) {
+      $(id).addEventListener('input', function (e) {
+        var v = parseInt(e.target.value, 10);
+        st.cap = isNaN(v) ? 0 : Math.max(0, v); render();
+      });
     });
-    $('capInput').addEventListener('input', function (e) {
-      var v = parseInt(e.target.value, 10);
-      st.cap = isNaN(v) ? 0 : Math.max(0, v); render(true);
+    HEALTH_CHECKS.forEach(function (name, i) {
+      var l = document.createElement('label'); l.className = 'chk';
+      var c = document.createElement('input'); c.type = 'checkbox';
+      c.onchange = function () { st.checks[i] = c.checked; renderHealth(); };
+      l.appendChild(c); l.appendChild(document.createTextNode(name));
+      $('hChecks').appendChild(l);
     });
+    $('hResult').addEventListener('click', function (e) {
+      if (e.target.dataset && e.target.dataset.go) { location.hash = e.target.dataset.go; showPanel(e.target.dataset.go); window.scrollTo(0, 0); }
+    });
+    buildCells();
     $('chgInput').addEventListener('input', function (e) {
       var v = parseFloat(e.target.value);
       st.chg = isNaN(v) ? 0 : Math.max(0, v); render(true);
     });
   }
 
-  function render(keepInputs) {
+  function setType(k) {
+    if (k !== st.type) { st.c = cOnTypeChange(k, st.c); st.type = k; }
+    render();
+  }
+  // S 數改變：cell 欄位重建並清空
+  function setS(n) {
+    if (n === st.s) return;
+    st.s = n; st.ir = []; st.fv = []; st.pv = [];
+    buildCells();
+  }
+  function buildCells() {
+    [['ir', 'g-ir'], ['fv', 'g-fv'], ['pv', 'g-pv']].forEach(function (g) {
+      var box = $(g[1]); box.innerHTML = '';
+      for (var i = 0; i < st.s; i++) {
+        var d = document.createElement('div'); d.className = 'cin';
+        d.innerHTML = '<small>Cell ' + (i + 1) + '</small><input class="num mono" type="number" inputmode="decimal" step="any" min="0">';
+        (function (i) {
+          d.querySelector('input').addEventListener('input', function (e) { st[g[0]][i] = e.target.value; renderHealth(); });
+        })(i);
+        box.appendChild(d);
+      }
+    });
+  }
+  function setVal(el, v) { if (document.activeElement !== el) el.value = v; }
+  function renderHealth() {
+    var r = healthAssess({ type: st.type, s: st.s, cap: st.cap, ir: st.ir, fv: st.fv, pv: st.pv,
+      checks: HEALTH_CHECKS.filter(function (_, i) { return st.checks[i]; }) });
+    ['ir', 'fv', 'pv', 'irScope'].forEach(function (k) { $('n-' + k).textContent = r.notes[k] || ''; });
+    var old = $('hResult').querySelector('details'), open = old && old.open;
+    var m = r.metrics, dash = function (v, u) { return v === null || v === undefined ? '—' : v + (u || ''); };
+    var li = function (a) { return '<ul>' + a.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>'; };
+    var h = '<div class="hres"><div class="top" style="background:' + r.color + (r.level === 'yellow' ? ';color:#111' : '') + '">' +
+      '<div class="lab">' + (r.level === 'gray' ? '⚪ ' : '● ') + r.label + '</div><div class="concl">' + r.conclusion + '</div></div><div class="body">';
+    if (r.level !== 'gray') h += '<h4>為什麼</h4>' + li(r.reasons);
+    else h += '<div style="color:#444;font-weight:700">資料填完會即時出結果。</div>';
+    if (r.level !== 'gray') {
+      h += '<h4>你現在該怎麼做</h4>' + li(r.actions);
+      if (r.level === 'red') h += '<div style="margin-top:8px"><button type="button" class="btn" data-go="recycle" style="padding:10px 14px;background:#e03131;color:#fff">前往「退役回收」</button></div>';
+      h += '<h4>不要做</h4>' + li(r.donts);
+      h += '<h4>建議用途：' + r.usage + '</h4><div>充電：' + r.charge + '｜飛行：' + r.fly + '</div>';
+    }
+    h += '<details style="margin-top:12px"' + (open ? ' open' : '') + '><summary style="font-weight:900;cursor:pointer">進階數據</summary><table>' +
+      [['健康分數', dash(r.score)], ['平均 IR', dash(m.avgIR, ' mΩ')], ['最高 IR', dash(m.maxIR, ' mΩ')], ['最低 IR', dash(m.minIR, ' mΩ')],
+       ['IR 落差', dash(m.irDelta, ' mΩ')], ['IR 倍率', m.irRatioText], ['滿電壓差', dash(m.fullDelta, ' V')], ['飛完壓差', dash(m.postDelta, ' V')],
+       ['飛完最低 cell', m.postMin === null ? '—' : 'Cell ' + m.postMinIdx + '（' + m.postMin.toFixed(2) + ' V）'],
+       ['最弱 cell', m.weakest ? 'Cell ' + m.weakest : '—']].map(function (x) { return '<tr><td>' + x[0] + '</td><td class="mono">' + x[1] + '</td></tr>'; }).join('') +
+      '</table></details></div></div>';
+    $('hResult').innerHTML = h;
+  }
+
+  function render() {
     var cfg = BATT[st.type], ac = cfg.accent, s = st.s;
     $('page').style.background = cfg.bg;
     $('typeBadge').textContent = cfg.label; $('typeBadge').style.background = ac;
@@ -369,10 +637,10 @@ function voltageRows(type, s) {
       ? '⚠ 1C 充電：僅限電芯原廠規格書明確標示支援此速率（如部分高倍率21700），一般18650/21700建議0.5C以下，全程監控溫度！'
       : '⚠ 2C 快充：請確認電池標示支援 2C，並全程監控溫度！';
 
-    if (!keepInputs) {
-      $('sInput').value = s;
-      $('capInput').value = st.cap;
-    }
+    setVal($('sInput'), s); setVal($('hsInput'), s);
+    setVal($('capInput'), st.cap); setVal($('hCapInput'), st.cap);
+    Array.prototype.forEach.call($('hTabs').children, function (b) { btnStyle(b, b.dataset.k === st.type, BATT[b.dataset.k].accent, 4); });
+    Array.prototype.forEach.call($('hsBtns').children, function (b) { btnStyle(b, +b.dataset.n === s, ac, 3); });
 
     var cur = chargeCurrent(st.cap, st.c), fv = fullVoltage(st.type, s);
     var lim = limitedCurrent(cur, fv, st.chg);
@@ -397,6 +665,7 @@ function voltageRows(type, s) {
     $('vbody').innerHTML = voltageRows(st.type, s).map(function (r) {
       return '<tr class="' + r.cls + '"><td>' + r.name + '</td><td class="mono">' + r.cell + '</td><td class="mono">' + r.total + '</td></tr>';
     }).join('');
+    renderHealth();
   }
 
   var PANELS = ['charge', 'health', 'recycle'];
