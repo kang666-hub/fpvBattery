@@ -25,6 +25,22 @@
   .sub { font-size:13px; color:#444; font-weight:700; }
   .row { display:flex; gap:10px; }
   .tab { flex:1; padding:13px 0; font-weight:900; font-size:16px; border:3px solid #111; background:#fff; color:#111; }
+  .ptabs { display:flex; gap:8px; }
+  .ptab { flex:1; padding:11px 0; font-weight:900; font-size:15px; border:3px solid #111; background:#fff; color:#111; }
+  .panel[hidden] { display:none; }
+  .panel { display:flex; flex-direction:column; gap:20px; }
+  details.gloss { margin-top:12px; border:2px solid #111; background:#fff; padding:10px 12px; font-size:13px; line-height:1.7; }
+  details.gloss summary { font-weight:900; cursor:pointer; }
+  details.gloss p { margin:8px 0 0; font-weight:400; }
+  .rcard { border:3px solid #111; background:#fff; padding:14px 16px; font-size:14px; line-height:1.7; }
+  .rcard h3 { margin:0 0 8px; font-size:16px; font-weight:900; color:#111; }
+  .rcard ol, .rcard ul { margin:0; padding-left:22px; }
+  .rcard li { margin-bottom:6px; font-weight:700; }
+  .rcard li span { font-weight:400; }
+  .rcard.red { background:#ffe3e3; border-color:#c92a2a; color:#c92a2a; font-weight:900; }
+  .rcard.yellow { background:#fff3bf; }
+  .rcard.gray { background:#e9ecef; }
+  .rcard p { margin:0 0 6px; font-weight:700; }
   .btn { padding:12px 0; font-weight:800; font-size:15px; border:2px solid #111; background:#fff; color:#111; }
   .chip { padding:9px 13px; font-size:13.5px; font-weight:700; border:2px solid #111; background:#fff; color:#111; }
   .num { background:#fff; border:2px solid #111; color:#111; font-size:16px; font-weight:700; padding:10px 8px; }
@@ -59,11 +75,19 @@
       <div class="badge" id="typeBadge"></div>
     </div>
 
+    <div class="ptabs" id="ptabs">
+      <button type="button" class="ptab" data-p="charge">充電</button>
+      <button type="button" class="ptab" data-p="health">健康檢查</button>
+      <button type="button" class="ptab" data-p="recycle">退役回收</button>
+    </div>
+
+    <div class="panel" id="panel-charge">
+
     <div>
       <div class="sec">01 / 電池類型</div>
       <div class="row" id="tabs"></div>
-      <div class="sub" style="margin-top:8px">單芯截止電壓 <span id="cutoffText"></span></div>
-      <div class="note" id="lionInfo" style="background:#d3f9d8;font-size:12.5px" hidden>ℹ Li-ion（如 18650／21700）單芯截止電壓雖與 LiPo 同為 4.20V，但可承受的充電倍率通常遠低於 LiPo，務必以電芯原廠規格書標示為準，勿直接套用 LiPo 的充電經驗值。</div>
+      <div class="sub" style="margin-top:8px">單芯滿充電壓 <span id="cutoffText"></span></div>
+      <div class="note" id="lionInfo" style="background:#d3f9d8;font-size:12.5px" hidden>ℹ Li-ion（如 18650／21700）單芯滿充電壓雖與 LiPo 同為 4.20V，但可承受的充電倍率通常遠低於 LiPo，務必以電芯原廠規格書標示為準，勿直接套用 LiPo 的充電經驗值。</div>
     </div>
 
     <div>
@@ -73,8 +97,8 @@
       </div>
       <div class="grid5" id="sBtns"></div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-        <span class="sub">自訂（1–12S）</span>
-        <input class="num" id="sInput" type="number" inputmode="numeric" min="1" max="12" style="width:76px">
+        <span class="sub">自訂（1–6S）</span>
+        <input class="num" id="sInput" type="number" inputmode="numeric" min="1" max="6" style="width:76px">
       </div>
     </div>
 
@@ -96,6 +120,7 @@
     </div>
 
     <div class="out">
+      <div id="summaryLine" style="margin-bottom:14px;font-size:15px;font-weight:900;color:#ffd60a;line-height:1.5" hidden></div>
       <div class="out-row mono" style="margin-bottom:5px"><span>充電器設定類型</span><b id="outType"></b></div>
       <div class="out-row mono" style="margin-bottom:16px"><span>充電模式建議</span><b>Balance 平衡充電</b></div>
       <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
@@ -110,7 +135,6 @@
       </div>
       <div class="dash" id="timeBox" hidden>
         <div class="mono" style="font-size:15px;font-weight:700;color:#fff" id="outTime"></div>
-        <div style="font-size:12px;color:#888;margin-top:4px">估算值（含平衡充末段保守係數）</div>
       </div>
     </div>
 
@@ -121,10 +145,75 @@
         <tbody id="vbody"></tbody>
       </table>
       <div class="small">降落電壓是飛行中（負載下）的讀值，落地後電壓會回升。<br>不飛超過幾天請充／放到儲存電壓。<br>以上為保守通用值；Li-ion 各電芯差異大，以電芯規格書為準。</div>
+      <details class="gloss">
+        <summary>看不懂？名詞白話解釋</summary>
+        <p><b>Balance 平衡充電</b>：讓每一顆 cell 都充到接近一樣的電壓，比較安全。</p>
+        <p><b>Storage 儲存電壓</b>：不飛超過幾天時，把電池放在約 3.80–3.85V/cell，比較不傷電池。</p>
+        <p><b>過放</b>：電池用到太低電壓，會傷電池，也可能讓電池變危險。</p>
+        <p><b>Voltage sag（壓降）</b>：油門一拉，電壓突然掉很多。通常代表電池老化或負載太大。</p>
+      </details>
+    </div>
+    </div>
+
+    <div class="panel" id="panel-health" hidden>
+      <div class="rcard">
+        <h3>電池健康度檢查</h3>
+        <p style="font-weight:400">即將推出</p>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-recycle" hidden>
+      <div class="rcard red">警告：不要刺破、剪開、拆解、短路或丟入火中。鼓包、破損、異常發熱或有異味的電池不要繼續充電或使用。</div>
+
+      <div class="rcard">
+        <h3>什麼情況該退役？</h3>
+        <p>出現以下任一狀況，建議停止使用並退役：</p>
+        <ol>
+          <li>電池鼓包</li>
+          <li>外皮破損、摔凹、撞擊變形</li>
+          <li>充電或飛行後異常發熱</li>
+          <li>有異味、漏液或冒煙</li>
+          <li>單 cell 電壓明顯異常</li>
+          <li>單 cell 內阻明顯高於其他 cell</li>
+          <li>滿電或飛完後 cell 壓差過大</li>
+          <li>飛行時 Voltage sag 嚴重、油門一拉就掉壓</li>
+          <li>實際容量明顯下降（飛行時間變很短）</li>
+          <li>平衡頭或主電源線受損</li>
+        </ol>
+      </div>
+
+      <div class="rcard">
+        <h3>安全處理步驟</h3>
+        <ol>
+          <li>停止使用：<span>不要再飛、不要再充電、不要再並充。</span></li>
+          <li>放到安全位置：<span>放在防火袋、防火箱、金屬箱，或戶外空曠的不燃物表面。遠離木頭、紙張、布料、汽油、溶劑等可燃物。</span></li>
+          <li>不要刺破：<span>絕對不要刺破、剪開、拆解或壓碎。刺破可能起火。</span></li>
+          <li>外觀正常的才放電：<span>外觀完好、沒有鼓包或發熱的電池，可以用充電器的 Discharge 或 Storage 功能把電放低再回收。鼓包、破損、發熱的電池不要再接充電器。</span></li>
+          <li>端子絕緣：<span>用絕緣膠帶包住 XT60／XT30 等主電源接頭與平衡頭，避免短路。</span></li>
+          <li>不要丟一般垃圾：<span>送到廢電池回收管道（見下方台灣回收管道）。</span></li>
+          <li>鼓包、冒煙、發燙或有異味時：<span>不要拿進室內、不要充電、不要放進車內等密閉高溫空間。先放在安全防火位置觀察，穩定後再回收。</span></li>
+        </ol>
+      </div>
+
+      <div class="rcard gray">
+        <h3>不建議：鹽水泡電池</h3>
+        <p style="font-weight:400">不建議把鹽水泡電池當成主要處理方式。鹽水放電速度慢、可能腐蝕端子，也不代表電池完全安全。建議使用充電器的 Discharge／Storage 功能、安全放電器，或直接交給回收管道。</p>
+      </div>
+
+      <div class="rcard yellow">
+        <h3>台灣回收管道</h3>
+        <ul>
+          <li>一般廢電池可以送便利商店、量販店、3C 賣場的廢電池回收點，或交給當地清潔隊。</li>
+          <li>FPV 電池包體積較大，各通路收不收不一定，<b>請先詢問門市或清潔隊</b>。</li>
+          <li>鼓包、破損的電池請先聯絡當地清潔隊詢問處理方式，不要直接丟進回收箱。</li>
+          <li>環境部資源回收專線：0800-085-717</li>
+          <li>回收前務必把主電源接頭與平衡頭用絕緣膠帶包好。</li>
+        </ul>
+      </div>
     </div>
 
     <div class="foot">
-      ⚠ 安全提醒：充電時人員請勿離開現場｜務必使用平衡充電（Balance）｜請於防火袋 / 防爆箱內充電｜電池鼓包、破損請勿充電。
+      ⚠ 充電不要離人｜務必 Balance 平衡充電｜在防火袋內充電｜鼓包、破損、異味、異常發熱請停止使用｜回收前將接頭絕緣
     </div>
 
   </div>
@@ -136,11 +225,13 @@ var BATT = {
   lipo: { label: 'LiPo',   nominal: 3.7, cutoff: 4.2,  accent: '#1d4ed8', bg: '#e7edf6', light: '#74a4ff',
           store: [3.80, 3.85], land: 3.60, min: 3.50, over: 3.00 },
   lihv: { label: 'LiHV',   nominal: 3.8, cutoff: 4.35, accent: '#e8590c', bg: '#f6ece3', light: '#ff9a5c',
-          store: [3.85, 3.85], land: 3.60, min: 3.50, over: 3.00 },
+          store: [3.80, 3.85], land: 3.60, min: 3.50, over: 3.00 },
   lion: { label: 'Li-ion', nominal: 3.6, cutoff: 4.2,  accent: '#2f9e44', bg: '#eaf4ec', light: '#69db7c',
           store: [3.60, 3.70], land: 3.20, min: 3.00, over: 2.50 }
 };
-var TIME_FACTOR = 1.2;
+var BALANCE_LOW = 1.1, BALANCE_HIGH = 1.3;
+var MAX_S = 6;
+function clampS(v) { return Math.min(MAX_S, Math.max(1, v)); }
 
 function chargeCurrent(capMah, c) { return capMah / 1000 * c; }
 function fullVoltage(type, s) { return BATT[type].cutoff * s; }
@@ -151,9 +242,15 @@ function limitedCurrent(current, fullV, limitW) {
   if (!(limitW > 0) || current * fullV <= limitW) return { actual: current, limited: false };
   return { actual: Math.floor(limitW / fullV * 10 + 1e-9) / 10, limited: true };
 }
-function chargeMinutes(capMah, actualA) {
+// 理論時間與含平衡末段範圍（皆由未取整理論值計算，最後各自四捨五入）
+function chargeTimes(capMah, actualA) {
   if (!(capMah > 0) || !(actualA > 0)) return null;
-  return Math.round(capMah / 1000 / actualA * 60 * TIME_FACTOR);
+  var t = capMah / 1000 / actualA * 60;
+  return { theory: Math.round(t), low: Math.round(t * BALANCE_LOW), high: Math.round(t * BALANCE_HIGH) };
+}
+function formatRange(a, b) {
+  if (b < 90) return a + '–' + b + ' 分鐘';
+  return formatDuration(a) + '–' + formatDuration(b);
 }
 // 切換類型時的倍率：Li-ion 一律 0.2C；LiPo/LiHV 目前倍率不在 0.5/1/2 內才改 1C
 function cOnTypeChange(newType, c) {
@@ -184,7 +281,7 @@ function voltageRows(type, s) {
 <script>
 (function () {
   var C_OPTS = {
-    std: [ { v: 0.5, label: '0.5C', sub: '慢充・平衡' }, { v: 1, label: '1C', sub: '推薦・最安全' }, { v: 2, label: '2C', sub: '快充・注意' } ],
+    std: [ { v: 0.5, label: '0.5C', sub: '慢充・保養' }, { v: 1, label: '1C', sub: '推薦・日常' }, { v: 2, label: '2C', sub: '快充・注意' } ],
     lion: [ { v: 0.2, label: '0.2C', sub: '安全・建議' }, { v: 0.5, label: '0.5C', sub: '多數電芯上限' }, { v: 1, label: '1C', sub: '僅限標示支援' } ]
   };
   var C_COLORS = ['#2f9e44', '#1971c2', '#e03131'];
@@ -227,12 +324,12 @@ function voltageRows(type, s) {
     }
     $('sInput').addEventListener('input', function (e) {
       var v = parseInt(e.target.value, 10);
-      if (!isNaN(v) && v >= 1 && v <= 12) { st.s = v; render(true); }
+      if (!isNaN(v) && v >= 1 && v <= 6) { st.s = v; render(true); }
     });
     $('sInput').addEventListener('change', function (e) {
       var v = parseInt(e.target.value, 10);
       if (isNaN(v)) v = 1;
-      st.s = Math.min(12, Math.max(1, v)); render();
+      st.s = clampS(v); render();
     });
     $('capInput').addEventListener('input', function (e) {
       var v = parseInt(e.target.value, 10);
@@ -252,6 +349,7 @@ function voltageRows(type, s) {
     $('cutoffText').textContent = cfg.cutoff.toFixed(2) + 'V'; $('cutoffText').style.color = ac;
     $('totalVolt').textContent = nominalVoltage(st.type, s).toFixed(1) + 'V'; $('totalVolt').style.color = ac;
     $('lionInfo').hidden = st.type !== 'lion';
+    if (st.panel) Array.prototype.forEach.call($('ptabs').children, function (b) { btnStyle(b, b.dataset.p === st.panel, ac, 4); });
 
     Array.prototype.forEach.call($('tabs').children, function (b) {
       btnStyle(b, b.dataset.k === st.type, BATT[b.dataset.k].accent, 4);
@@ -269,7 +367,7 @@ function voltageRows(type, s) {
     $('warnC').hidden = !warn;
     $('warnC').textContent = st.type === 'lion'
       ? '⚠ 1C 充電：僅限電芯原廠規格書明確標示支援此速率（如部分高倍率21700），一般18650/21700建議0.5C以下，全程監控溫度！'
-      : '⚠ 2C 快充：請確認電池標示支援 2C，全程監控溫度！';
+      : '⚠ 2C 快充：請確認電池標示支援 2C，並全程監控溫度！';
 
     if (!keepInputs) {
       $('sInput').value = s;
@@ -287,9 +385,13 @@ function voltageRows(type, s) {
       var eff = st.cap > 0 ? lim.actual / (st.cap / 1000) : 0;
       $('limitMsg').textContent = '⚠ 充電器功率不足，實際約 ' + lim.actual.toFixed(1) + 'A（約 ' + eff.toFixed(2) + 'C）';
     }
-    var mins = chargeMinutes(st.cap, lim.actual);
-    $('timeBox').hidden = mins === null;
-    if (mins !== null) $('outTime').textContent = '從空電到滿電約 ' + formatDuration(mins);
+    var tm = chargeTimes(st.cap, lim.actual);
+    $('timeBox').hidden = tm === null;
+    $('summaryLine').hidden = tm === null;
+    if (tm !== null) {
+      $('outTime').textContent = '理論約 ' + formatDuration(tm.theory) + '；含平衡末段約 ' + formatRange(tm.low, tm.high);
+      $('summaryLine').textContent = '充電器設 ' + cfg.label + '／Balance／' + lim.actual.toFixed(1) + ' A，約 ' + formatRange(tm.low, tm.high) + '充滿';
+    }
 
     $('thTotal').textContent = '總電壓（' + s + 'S）';
     $('vbody').innerHTML = voltageRows(st.type, s).map(function (r) {
@@ -297,7 +399,23 @@ function voltageRows(type, s) {
     }).join('');
   }
 
-  build(); render();
+  var PANELS = ['charge', 'health', 'recycle'];
+  function showPanel(p) {
+    if (PANELS.indexOf(p) < 0) p = 'charge';
+    PANELS.forEach(function (k) { $('panel-' + k).hidden = k !== p; });
+    Array.prototype.forEach.call($('ptabs').children, function (b) {
+      btnStyle(b, b.dataset.p === p, BATT[st.type].accent, 4);
+    });
+    st.panel = p;
+  }
+  function panelFromHash() { return location.hash.replace('#', ''); }
+  $('ptabs').addEventListener('click', function (e) {
+    var p = e.target.dataset && e.target.dataset.p;
+    if (p) { location.hash = p; showPanel(p); }
+  });
+  window.addEventListener('hashchange', function () { showPanel(panelFromHash()); });
+
+  build(); render(); showPanel(panelFromHash());
 })();
 </script>
 </body>

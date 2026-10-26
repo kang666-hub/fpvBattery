@@ -19,7 +19,7 @@ test('2 6S LiPo', () => {
 test('3 4S LiHV', () => {
   const r = rows('lihv', 4);
   assert.equal(ctx.fullVoltage('lihv', 4).toFixed(2), '17.40');
-  assert.equal(r['儲存'].total, '15.4'); assert.equal(r['建議降落'].total, '14.4');
+  assert.equal(r['儲存'].total, '15.2–15.4'); assert.equal(r['建議降落'].total, '14.4');
 });
 test('4 4S Li-ion', () => {
   const r = rows('lion', 4);
@@ -30,17 +30,18 @@ test('5 6S 15000 1C 無限制', () => {
   const cur = ctx.chargeCurrent(15000, 1), fv = ctx.fullVoltage('lipo', 6);
   const l = ctx.limitedCurrent(cur, fv, 0);
   assert.equal(l.actual.toFixed(1), '15.0'); assert.equal(ctx.requiredPower(cur, fv), 378);
-  assert.equal(ctx.chargeMinutes(15000, l.actual), 72);
+  assert.deepEqual({ ...ctx.chargeTimes(15000, l.actual) }, { theory: 60, low: 66, high: 78 });
 });
 test('6 200W 限制', () => {
   const cur = ctx.chargeCurrent(15000, 1), fv = ctx.fullVoltage('lipo', 6);
   const l = ctx.limitedCurrent(cur, fv, 200);
   assert.ok(l.limited); assert.equal(l.actual.toFixed(1), '7.9');
   assert.equal((l.actual / 15).toFixed(2), '0.53');
-  const m = ctx.chargeMinutes(15000, l.actual);
-  assert.equal(ctx.formatDuration(m), '2 小時 17 分');
+  const m = ctx.chargeTimes(15000, l.actual);
+  assert.equal(ctx.formatDuration(m.theory), '1 小時 54 分');
+  assert.equal(ctx.formatRange(m.low, m.high), '2 小時 5 分–2 小時 28 分');
 });
-test('容量0不顯示時間', () => assert.equal(ctx.chargeMinutes(0, 1), null));
+test('容量0不顯示時間', () => assert.equal(ctx.chargeTimes(0, 1), null));
 test('切換類型倍率規則', () => {
   assert.equal(ctx.cOnTypeChange('lion', 1), 0.2);
   assert.equal(ctx.cOnTypeChange('lion', 2), 0.2);
@@ -49,3 +50,11 @@ test('切換類型倍率規則', () => {
   assert.equal(ctx.cOnTypeChange('lihv', 0.5), 0.5);
   assert.equal(ctx.cOnTypeChange('lipo', 2), 2);
 });
+test('LiPo 6S 1300mAh 2C', () => {
+  const cur = ctx.chargeCurrent(1300, 2), fv = ctx.fullVoltage('lipo', 6);
+  assert.equal(cur.toFixed(1), '2.6'); assert.equal(fv.toFixed(2), '25.20'); assert.equal(ctx.requiredPower(cur, fv), 66);
+  const t = ctx.chargeTimes(1300, cur);
+  assert.equal(t.theory, 30); assert.equal(ctx.formatRange(t.low, t.high), '33–39 分鐘');
+});
+test('4S LiHV 儲存範圍', () => assert.equal(rows('lihv', 4)['儲存'].total, '15.2–15.4'));
+test('S 數上限 6', () => { assert.equal(ctx.clampS(8), 6); assert.equal(ctx.clampS(0), 1); assert.equal(ctx.clampS(4), 4); });
